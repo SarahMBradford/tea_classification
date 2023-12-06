@@ -25,7 +25,7 @@ st.set_page_config(page_title='Tea or Coffee for you today?',
 st.title('Tea or Coffee for you today?')
 
 # upload image
-tea_image = Image.open('/Users/sarahbradford/Downloads/tea_coffee.jpg')
+tea_image = Image.open('tea_coffee.jpg')
 st.image(tea_image, use_column_width=True)
 st.header("Starbucks: Tea Classification")
 st.sidebar.success("Page Navigation")
