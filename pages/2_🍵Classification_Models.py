@@ -316,7 +316,7 @@ if selected_choice == "XGBoost":
     xgb_classification_report_df = xgb_classification_report_df.round(2)
     xgb_classification_report_df = xgb_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
     st.write(xgb_classification_report_df)
-    st.subheader("View the nutritional labels and predicted drinks below:)
+    st.subheader("View the nutritional labels and predicted drinks below:")
     starbucks_drinks['Predicted Drink'] = xgb.predict(X)
     starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
     st.write(starbucks_drinks)
