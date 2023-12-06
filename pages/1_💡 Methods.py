@@ -15,7 +15,7 @@ import plotly.express as px
 import streamlit as st
 import prettytable
 
-starbucks_drinks = pd.read_csv("/Users/sarahbradford/Downloads/starbucks_drinks.csv")
+starbucks_drinks = pd.read_csv("starbucks_drinks.csv")
 starbucks_drinks.head()
 
 starbucks_drinks['Caffeine (mg)'] = pd.to_numeric(starbucks_drinks['Caffeine (mg)'], errors='coerce')
