@@ -33,4 +33,20 @@ st.write("Welcome to the Starbucks Tea Classification App! This app will enable 
 st.subheader("Why Tea?")
 st.write("Tea is an excellent alternative to coffee. Tea has several health benefits, including reducing the risk of strokes and heart attacks while boosting the immune system and simultaneously reducing the risk of cancer. Tea contains less caffeine than coffee, so it is an ideal alternative for those who get overstimulated. Lastly, tea is also a great option for people who desire to reduce their sugar and fat intake, as many tea drinks are naturally sweet and do not require added sugar or creamers.")
 
+t_sug_cal = (
+    alt.Chart(tazo_teas)
+    .mark_circle(size=200)
+    .encode(
+        x='Sugars (g):Q',
+        y='Calories:Q',
+        size='Caffeine (mg):Q',
+        color=alt.condition(single, 'Beverage:N', alt.value('lightgray')),
+        tooltip=['Sugars (g):Q', 'Calories:Q', 'Caffeine (mg):Q', 'Beverage:N']
+    )
+    .interactive()
+    .add_selection(single)
+)
+st.subheader("Relationships between Caffienated Tazo Teas with Sugars and Calories")
+st.altair_chart(t_sug_cal, use_container_width=True)
+st.markdown('<p class="font_subtext">Figure 3: Caffienated Tazo Teas with Sugars and Calories', unsafe_allow_html=True) 
 
