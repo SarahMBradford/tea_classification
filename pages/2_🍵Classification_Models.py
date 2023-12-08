@@ -24,6 +24,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.neighbors import KNeighborsClassifier
+import plotly.graph_objects as go
+from sklearn.metrics import precision_recall_curve
 
 
 starbucks_drinks = pd.read_csv("starbucks_drinks.csv")
