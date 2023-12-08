@@ -1,5 +1,6 @@
 from PIL import Image
 import streamlit as st
+st.sidebar.success("Page Navigation")
 st.title("Meet the Curly Headed Coder")
 # create two columns
 col1, col2 = st.columns([4,8])
