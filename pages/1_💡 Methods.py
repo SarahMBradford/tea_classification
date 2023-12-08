@@ -14,6 +14,7 @@ import altair as alt
 import plotly.express as px
 import streamlit as st
 import prettytable
+from PIL import Image
 
 starbucks_drinks = pd.read_csv("starbucks_drinks.csv")
 starbucks_drinks.head()
