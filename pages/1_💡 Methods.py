@@ -16,6 +16,7 @@ import streamlit as st
 import prettytable
 from PIL import Image
 
+st.sidebar.success("Page Navigation")
 starbucks_drinks = pd.read_csv("starbucks_drinks.csv")
 starbucks_drinks.head()
 
