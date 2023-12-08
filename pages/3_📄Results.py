@@ -1,6 +1,7 @@
 import streamlit as st
 from PIL import Image
 import pandas as pd
+st.sidebar.success("Page Navigation")
 st.title("Results")
 st.subheader("By using all nutritional values in the Starbucks dataset, it can be concluded that the XGBoost model is the best model for predicting whether a drink is tea or not. The XGBoost model had an accuracy of 0.99, which is the highest accuracy out of all the models. The XGBoost model also had the highest precision, recall, and F1 score.")
 model_names = ['Logistic Regression', 'SVM', 'Decision Tree', 'Random Forest', 'KNN', 'Naive Bayes', 'XGBoost']
