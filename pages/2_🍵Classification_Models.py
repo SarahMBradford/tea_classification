@@ -26,6 +26,7 @@ from sklearn.metrics import classification_report
 from sklearn.neighbors import KNeighborsClassifier
 import plotly.graph_objects as go
 from sklearn.metrics import precision_recall_curve
+st.sidebar.success("Page Navigation")
 
 
 starbucks_drinks = pd.read_csv("starbucks_drinks.csv")
