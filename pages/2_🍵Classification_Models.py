@@ -65,12 +65,8 @@ def onehot_encode(starbucks_drinks, columns, prefixes):
     for column, prefix in zip(columns, prefixes):
         dummies = pd.get_dummies(starbucks_drinks[column], prefix=prefix)
         starbucks_drinks = pd.concat([starbucks_drinks, dummies], axis=1)
-
-    # Drop the original columns after processing all specified columns
     starbucks_drinks = starbucks_drinks.drop(columns, axis=1)
     return starbucks_drinks
-
-# Example usage
 starbucks_drinks = onehot_encode(
     starbucks_drinks,
     columns=['Beverage_prep'],
@@ -78,13 +74,13 @@ starbucks_drinks = onehot_encode(
 )
 starbucks_drinks.head()
 
-# scale the data
+# Scaling
 X = starbucks_drinks.drop(['Tea'], axis=1)
 y = starbucks_drinks['Tea']
 starbucks_scaler = StandardScaler()
 X = starbucks_scaler.fit_transform(X)
 
-# split the data into training and testing sets
+# Split the data set
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 st.set_option('deprecation.showPyplotGlobalUse', False)
 st.title("Classification Models")
@@ -95,231 +91,405 @@ if selected_choice == 'Logistic Regression':
     logreg = LogisticRegression()
     logreg.fit(X_train, y_train)
     y_pred = logreg.predict(X_test)
-# confusion matrix
     lr_confusion_matrix = metrics.confusion_matrix(y_test, y_pred)
-# plot confusion matrix
+# Confusion Matrix Plot
     class_names = ['Coffee', 'Tea']
-    fig, ax = plt.subplots()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names)
-    plt.yticks(tick_marks, class_names)
-    sns.heatmap(pd.DataFrame(lr_confusion_matrix), annot=True, cmap="YlGn", fmt='g')
-    ax.xaxis.set_label_position("top")
-    plt.tight_layout()
-    plt.title('Tea vs. Coffee: Logistic Regression Confusion Matrix', y=1.1)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot()
+    fig = px.imshow(lr_confusion_matrix,
+                    labels=dict(x="Predicted", y="Actual", Count="greens"),
+                    x=class_names, y=class_names)
+
+    # Add annotations for the number of observations in each square
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            Count = 'white' if lr_confusion_matrix[i, j] > lr_confusion_matrix.max() / 2 else 'black'
+            fig.add_annotation(
+                go.layout.Annotation(
+                    text=str(lr_confusion_matrix[i, j]),
+                    x=class_names[j],
+                    y=class_names[i],
+                    showarrow=False,
+                    font=dict(color=Count)
+                )
+            )
+    # Plotly Layout
+    fig.update_xaxes(side="top")
+    fig.update_layout(coloraxis=dict(colorscale='greens'))
+    fig.update_layout(title_text="Confusion Matrix for Logistic Regression", margin=dict(b=10, t=140))
+    st.plotly_chart(fig)
+
 # classification report
     print(metrics.classification_report(y_test, y_pred))
-    st.write("Figure 1: Logistic Regression Classification Report")
-    st.write("The Logistic Regression model has an accuracy of 0.82. 56 teas were predicted correctly, 13 drinks were incorrectly predicted as teas, 4 drinks were incorrectly as coffees, and 0 drinks were incorrectly rejected")
-    # put the classification report in a pretty table
-    lr_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    lr_classification_report_df = pd.DataFrame(lr_classification_report).transpose()
-    lr_classification_report_df = lr_classification_report_df.round(2)
-    lr_classification_report_df = lr_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
-    st.write(lr_classification_report_df)
+    st.write("Figure 1: Logistic Regression Classification Confusion Matrix")
+    st.write("The Logistic Regression model has an accuracy of 0.82. 56 coffees were predicted correctly, 13 tea drinks were incorrectly predicted as coffees, 4 tea drinks were correctly predicted as teas, and 0 drinks were incorrectly rejected.")
+    if st.checkbox("View Classification Report for Logistic Regression Model") == True:
+        lr_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
+        lr_classification_report_df = pd.DataFrame(lr_classification_report).transpose()
+        lr_classification_report_df = lr_classification_report_df.round(2)
+        lr_classification_report_df = lr_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
+        st.write(lr_classification_report_df)
+# plot precision-recall curve
+    precision, recall, _ = metrics.precision_recall_curve(y_test, logreg.decision_function(X_test))
+    pr_df = pd.DataFrame({'Precision': precision, 'Recall': recall})
+    st.altair_chart(
+        alt.Chart(pr_df).mark_line(color='green').encode(
+            x='Recall:Q',
+            y='Precision:Q'
+        ).properties(
+            title='Precision-Recall Curve for Logistic Regression'
+        ).interactive()
+    )
+    st.subheader("View the nutritional labels and predicted drinks below:")
+    starbucks_drinks['Predicted Drink'] = logreg.predict(X)
+    starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
+    st.write(starbucks_drinks)
 
 
 #SVM
 if selected_choice == 'SVM':
-    # SVM 
     from sklearn.svm import SVC
     svm = SVC()
     svm.fit(X_train, y_train)
     y_pred = svm.predict(X_test)
-    print('Accuracy of SVM classifier on test set: {:.2f}'.format(svm.score(X_test, y_test)))
 # confusion matrix
     svm_confusion_matrix = metrics.confusion_matrix(y_test, y_pred)
-    svm_confusion_matrix
-# plot confusion matrix
+ # Plot SVM Model
     class_names = ['Coffee', 'Tea']
-    fig, ax = plt.subplots()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names)
-    plt.yticks(tick_marks, class_names)
-    sns.heatmap(pd.DataFrame(svm_confusion_matrix), annot=True, cmap="YlGn", fmt='g')
-    ax.xaxis.set_label_position("top")
-    plt.tight_layout()
-    plt.title('Tea vs. Coffee: SVM Confusion Matrix', y=1.1)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot()
-    # classification report
-    print(metrics.classification_report(y_test, y_pred))
-    st.write("Figure 2: SVM Classification Report")
-    st.write("The SVM model has an accuracy of 0.78. 56 teas were predicted correctly, 16 drinks were incorrectly predicted as teas, 1 drink was incorrectly as coffees, and 0 drinks were incorrectly rejected")
-    # put the classification report in a pretty table
-    svm_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    svm_classification_report_df = pd.DataFrame(svm_classification_report).transpose()
-    svm_classification_report_df = svm_classification_report_df.round(2)
-    svm_classification_report_df = svm_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
-    st.write(svm_classification_report_df)
+    fig = px.imshow(svm_confusion_matrix,
+                    labels=dict(x="Predicted", y="Actual", Count="greens"),
+                    x=class_names, y=class_names)
+
+    # Add annotations for the number of observations in each square
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            Count = 'white' if svm_confusion_matrix[i, j] > svm_confusion_matrix.max() / 2 else 'black'
+            fig.add_annotation(
+                go.layout.Annotation(
+                    text=str(svm_confusion_matrix[i, j]),
+                    x=class_names[j],
+                    y=class_names[i],
+                    showarrow=False,
+                    font=dict(color=Count)
+                )
+            )
+    # Plotly Layout
+    fig.update_xaxes(side="top")
+    fig.update_layout(coloraxis=dict(colorscale='greens'))
+    fig.update_layout(title_text="Confusion Matrix for Support Vector Machine", margin=dict(b=10, t=140))
+    st.plotly_chart(fig)
+    
+
+# classification report
+    st.write("Figure 2: SVM Classification Confusion Matrix")
+    st.write("The Logistic Regression model has an accuracy of 0.78. 56 coffees were predicted correctly, 16 tea drinks were incorrectly predicted as coffees, 1 tea drinks was correctly predicted as a tea, and 0 drinks were incorrectly rejected.")
+    if st.checkbox("View Classification Report for SVM Model") == True:
+        svm_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
+        svm_classification_report_df = pd.DataFrame(svm_classification_report).transpose()
+        svm_classification_report_df = svm_classification_report_df.round(2)
+        svm_classification_report_df = svm_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
+        st.write(svm_classification_report_df)
+    
+    precision, recall, _ = metrics.precision_recall_curve(y_test, svm.decision_function(X_test))
+    pr_df = pd.DataFrame({'Precision': precision, 'Recall': recall})
+    st.altair_chart(
+        alt.Chart(pr_df).mark_line(color='green').encode(
+            x='Recall:Q',
+            y='Precision:Q'
+        ).properties(
+            title='Precision-Recall Curve for SVM'
+        ).interactive()
+    )
+    
+    st.subheader("View the nutritional labels and predicted drinks below:")
+    starbucks_drinks['Predicted Drink'] = svm.predict(X)
+    starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
+    st.write(starbucks_drinks)
+
 # Decision Tree
 if selected_choice == 'Decision Tree':
-    dtree = DecisionTreeClassifier()
+    dtree=DecisionTreeClassifier()
     dtree.fit(X_train, y_train)
     y_pred = dtree.predict(X_test)
     print('Accuracy of Decision Tree classifier on test set: {:.2f}'.format(dtree.score(X_test, y_test)))
     # confusion matrix
     dtree_confusion_matrix = metrics.confusion_matrix(y_test, y_pred)
-    dtree_confusion_matrix
-    # plot confusion matrix
     class_names = ['Coffee', 'Tea']
-    fig, ax = plt.subplots()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names)
-    plt.yticks(tick_marks, class_names)
-    sns.heatmap(pd.DataFrame(dtree_confusion_matrix), annot=True, cmap="YlGn", fmt='g')
-    ax.xaxis.set_label_position("top")
-    plt.tight_layout()
-    plt.title('Tea vs. Coffee: Decision Tree Confusion Matrix', y=1.1)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot()
-    # classification report
-    print(metrics.classification_report(y_test, y_pred))
-    st.write("Figure 3: Decision Tree Classification Report")
-    st.write("The Decision Tree model has an accuracy of 0.95. 55 teas were predicted correctly, 3 drinks were incorrectly predicted as teas, 14 drinks were incorrectly as coffees, and 1 drink was incorrectly rejected")
-    # put the classification report in a pretty table
-    dtree_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    dtree_classification_report_df = pd.DataFrame(dtree_classification_report).transpose()
-    dtree_classification_report_df = dtree_classification_report_df.round(2)
-    dtree_classification_report_df = dtree_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
-    st.write(dtree_classification_report_df)
+    fig = px.imshow(dtree_confusion_matrix,
+                    labels=dict(x="Predicted", y="Actual", Count="greens"),
+                    x=class_names, y=class_names)
+
+    probs = dtree.predict_proba(X_test)
+    # Add annotations for the number of observations in each square
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            Count = 'white' if dtree_confusion_matrix[i, j] > dtree_confusion_matrix.max() / 2 else 'black'
+            fig.add_annotation(
+                go.layout.Annotation(
+                    text=str(dtree_confusion_matrix[i, j]),
+                    x=class_names[j],
+                    y=class_names[i],
+                    showarrow=False,
+                    font=dict(color=Count)
+                )
+            )
+    # Plotly Layout
+    fig.update_xaxes(side="top")
+    fig.update_layout(coloraxis=dict(colorscale='greens'))
+    fig.update_layout(title_text="Confusion Matrix for Decision Tree", margin=dict(b=10, t=140))
+    st.plotly_chart(fig)
+
+# classification report
+    st.write("Figure 3: Decision Tree Classification Confusion Matrix")
+    st.write("The Decision Tree model has an accuracy of 0.92. 55 coffees were predicted correctly, 3 tea drinks were incorrectly predicted as coffees, 14 tea drinks was correctly predicted as a tea, and 1 drink was incorrectly rejected.")
+    if st.checkbox("View Classification Report for Decision Tree Model") == True:
+        dtree_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
+        dtree_classification_report_df = pd.DataFrame(dtree_classification_report).transpose()
+        dtree_classification_report_df = dtree_classification_report_df.round(2)
+        dtree_classification_report_df = dtree_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
+        st.write(dtree_classification_report_df)
+    precision, recall, _ = metrics.precision_recall_curve(y_test, probs[:, 1])
+    pr_df = pd.DataFrame({'Precision': precision, 'Recall': recall})
+
+    alt_chart = alt.Chart(pr_df).mark_line(color='green').encode(
+    x='Recall:Q',
+    y='Precision:Q'
+        ).properties(
+    title='Precision-Recall Curve for Decision Tree'
+    ).interactive()
+
+    st.altair_chart(alt_chart)
+    st.subheader("View the nutritional labels and predicted drinks below:")
+    starbucks_drinks['Predicted Drink'] = dtree.predict(X)
+    starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
+    st.write(starbucks_drinks)
+
 # Random Forest
 if selected_choice == 'Random Forest':
     rf = RandomForestClassifier()
     rf.fit(X_train, y_train)
     y_pred = rf.predict(X_test)
     print('Accuracy of Random Forest classifier on test set: {:.2f}'.format(rf.score(X_test, y_test)))
-    # confusion matrix
+# confusion matrix
     rf_confusion_matrix = metrics.confusion_matrix(y_test, y_pred)
-    rf_confusion_matrix
-    # plot confusion matrix
+# plot confusion matrix
     class_names = ['Coffee', 'Tea']
-    fig, ax = plt.subplots()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names)
-    plt.yticks(tick_marks, class_names)
-    sns.heatmap(pd.DataFrame(rf_confusion_matrix), annot=True, cmap="YlGn", fmt='g')
-    ax.xaxis.set_label_position("top")
-    plt.tight_layout()
-    plt.title('Tea vs. Coffee: Random Forest Confusion Matrix', y=1.1)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot()
-    # classification report
-    print(metrics.classification_report(y_test, y_pred))
-    st.write("Figure 4: Random Forest Classification Report")
-    st.write("The Random Forest model has an accuracy of 0.89. 55 teas were predicted correctly, 4 drinks were incorrectly predicted as teas, 13 drinks were incorrectly as coffees, and 1 drink was incorrectly rejected")
-    # put the classification report in a pretty table
-    rf_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    rf_classification_report_df = pd.DataFrame(rf_classification_report).transpose()
-    rf_classification_report_df = rf_classification_report_df.round(2)
-    rf_classification_report_df = rf_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
-    st.write(rf_classification_report_df)
+    fig = px.imshow(rf_confusion_matrix,
+                    labels=dict(x="Predicted", y="Actual", Count="greens"),
+                    x=class_names, y=class_names)
+
+    probs = rf.predict_proba(X_test)
+    # Add annotations for the number of observations in each square
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            Count = 'white' if rf_confusion_matrix[i, j] > rf_confusion_matrix.max() / 2 else 'black'
+            fig.add_annotation(
+                go.layout.Annotation(
+                    text=str(rf_confusion_matrix[i, j]),
+                    x=class_names[j],
+                    y=class_names[i],
+                    showarrow=False,
+                    font=dict(color=Count)
+                )
+            )
+    # Plotly Layout
+    fig.update_xaxes(side="top")
+    fig.update_layout(coloraxis=dict(colorscale='greens'))
+    fig.update_layout(title_text="Confusion Matrix for Random Forest", margin=dict(b=10, t=140))
+    st.plotly_chart(fig)
+
+# classification report
+    st.write("Figure 4: Random Forest Classification Confusion Matrix")
+    st.write("The Random Forest model has an accuracy of 0.85. 55 coffees were predicted correctly, 7 tea drinks were incorrectly predicted as coffees, 10 tea drinks was correctly predicted as a tea, and 1 drink was incorrectly rejected.")
+    if st.checkbox("View Classification Report for Random Forest Model") == True:
+        rf_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
+        rf_classification_report_df = pd.DataFrame(rf_classification_report).transpose()
+        rf_classification_report_df = rf_classification_report_df.round(2)
+        rf_classification_report_df = rf_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
+        st.write(rf_classification_report_df)
+    precision, recall, _ = metrics.precision_recall_curve(y_test, probs[:, 1])
+    pr_df = pd.DataFrame({'Precision': precision, 'Recall': recall})
+
+    alt_chart = alt.Chart(pr_df).mark_line(color='green').encode(
+    x='Recall:Q',
+    y='Precision:Q'
+        ).properties(
+    title='Precision-Recall Curve for Random Forest'
+    ).interactive()
+
+    st.altair_chart(alt_chart)
+    st.subheader("View the nutritional labels and predicted drinks below:")
+    starbucks_drinks['Predicted Drink'] = rf.predict(X)
+    starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
+    st.write(starbucks_drinks)
+    
 # KNN
-if selected_choice == "KNN":
+if selected_choice == 'KNN':
     knn = KNeighborsClassifier()
     knn.fit(X_train, y_train)
     y_pred = knn.predict(X_test)
-    print('Accuracy of KNN classifier on test set: {:.2f}'.format(knn.score(X_test, y_test)))
-    # confusion matrix
+# confusion matrix
     knn_confusion_matrix = metrics.confusion_matrix(y_test, y_pred)
-    knn_confusion_matrix
-    # plot confusion matrix
+# plot confusion matrix
     class_names = ['Coffee', 'Tea']
-    fig, ax = plt.subplots()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names)
-    plt.yticks(tick_marks, class_names)
-    sns.heatmap(pd.DataFrame(knn_confusion_matrix), annot=True, cmap="YlGn", fmt='g')
-    ax.xaxis.set_label_position("top")
-    plt.tight_layout()
-    plt.title('Tea vs. Coffee: KNN Confusion Matrix', y=1.1)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot()
-    # classification report
-    print(metrics.classification_report(y_test, y_pred))
-    st.write("Figure 5: KNN Classification Report")
-    st.write("The KNN model has an accuracy of 0.86. 50 teas were predicted correctly, 4 drinks were incorrectly predicted as teas, 13 drinks were incorrectly as coffees, and 6 drinks were incorrectly rejected")
-    # put the classification report in a pretty table
-    knn_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    knn_classification_report_df = pd.DataFrame(knn_classification_report).transpose()
-    knn_classification_report_df = knn_classification_report_df.round(2)
-    knn_classification_report_df = knn_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
-    st.write(knn_classification_report_df)
+    fig = px.imshow(knn_confusion_matrix,
+                    labels=dict(x="Predicted", y="Actual", Count="greens"),
+                    x=class_names, y=class_names)
+
+    probs = knn.predict_proba(X_test)
+    # Add annotations for the number of observations in each square
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            Count = 'white' if knn_confusion_matrix[i, j] > knn_confusion_matrix.max() / 2 else 'black'
+            fig.add_annotation(
+                go.layout.Annotation(
+                    text=str(knn_confusion_matrix[i, j]),
+                    x=class_names[j],
+                    y=class_names[i],
+                    showarrow=False,
+                    font=dict(color=Count)
+                )
+            )
+    # Plotly Layout
+    fig.update_xaxes(side="top")
+    fig.update_layout(coloraxis=dict(colorscale='greens'))
+    fig.update_layout(title_text="Confusion Matrix for KNN", margin=dict(b=10, t=140))
+    st.plotly_chart(fig)
+
+# classification report
+    st.write("Figure 5: KNN Classification Confusion Matrix")
+    st.write("The KNN model has an accuracy of 0.86. 50 coffees were predicted correctly, 4 tea drinks were incorrectly predicted as coffees, 13 tea drinks was correctly predicted as a tea, and 6 drinks were incorrectly rejected.")
+    if st.checkbox("View Classification Report for KNN Model") == True:
+        rf_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
+        rf_classification_report_df = pd.DataFrame(rf_classification_report).transpose()
+        rf_classification_report_df = rf_classification_report_df.round(2)
+        rf_classification_report_df = rf_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
+        st.write(rf_classification_report_df)
+    precision, recall, _ = metrics.precision_recall_curve(y_test, probs[:, 1])
+    pr_df = pd.DataFrame({'Precision': precision, 'Recall': recall})
+
+    alt_chart = alt.Chart(pr_df).mark_line(color='green').encode(
+    x='Recall:Q',
+    y='Precision:Q'
+        ).properties(
+    title='Precision-Recall Curve for KNN'
+    ).interactive()
+
+    st.altair_chart(alt_chart)
+    st.subheader("View the nutritional labels and predicted drinks below:")
+    starbucks_drinks['Predicted Drink'] = knn.predict(X)
+    starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
+    st.write(starbucks_drinks)
 # Naive Bayes
-if selected_choice == "Naive Bayes":
+if selected_choice == 'Naive Bayes':
     nb = GaussianNB()
     nb.fit(X_train, y_train)
     y_pred = nb.predict(X_test)
-    print('Accuracy of Naive Bayes classifier on test set: {:.2f}'.format(nb.score(X_test, y_test)))
-    # confusion matrix
+# confusion matrix
     nb_confusion_matrix = metrics.confusion_matrix(y_test, y_pred)
-    nb_confusion_matrix
-    # plot confusion matrix
+# plot confusion matrix
     class_names = ['Coffee', 'Tea']
-    fig, ax = plt.subplots()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names)
-    plt.yticks(tick_marks, class_names)
-    sns.heatmap(pd.DataFrame(nb_confusion_matrix), annot=True, cmap="YlGn", fmt='g')
-    ax.xaxis.set_label_position("top")
-    plt.tight_layout()
-    plt.title('Tea vs. Coffee: Naive Bayes Confusion Matrix', y=1.1)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot()
-    # classification report
-    print(metrics.classification_report(y_test, y_pred))
-    st.write("Figure 6: Naive Bayes Classification Report")
-    st.write("The Naive Bayes model has an accuracy of 0.60. Only 30 teas were predicted correctly, 4 drinks were incorrectly predicted as teas, 13 drinks were incorrectly as coffees, and 25 drinks were incorrectly rejected. This model is not recommended for this dataset.")
-    # put the classification report in a pretty table
-    nb_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    nb_classification_report_df = pd.DataFrame(nb_classification_report).transpose()
-    nb_classification_report_df = nb_classification_report_df.round(2)
-    nb_classification_report_df = nb_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
-    st.write(nb_classification_report_df)
+    fig = px.imshow(nb_confusion_matrix,
+                    labels=dict(x="Predicted", y="Actual", Count="greens"),
+                    x=class_names, y=class_names)
+
+    probs = nb.predict_proba(X_test)
+    # Add annotations for the number of observations in each square
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            Count = 'white' if nb_confusion_matrix[i, j] > nb_confusion_matrix.max() / 2 else 'black'
+            fig.add_annotation(
+                go.layout.Annotation(
+                    text=str(nb_confusion_matrix[i, j]),
+                    x=class_names[j],
+                    y=class_names[i],
+                    showarrow=False,
+                    font=dict(color=Count)
+                )
+            )
+    # Plotly Layout
+    fig.update_xaxes(side="top")
+    fig.update_layout(coloraxis=dict(colorscale='greens'))
+    fig.update_layout(title_text="Confusion Matrix for Naive Bayes", margin=dict(b=10, t=140))
+    st.plotly_chart(fig)
+
+# classification report
+    st.write("Figure 6: Naive Bayes Classification Confusion Matrix")
+    st.write("The Naive Bayes model has an accuracy of 0.60. 31 coffees were predicted correctly, 4 tea drinks were incorrectly predicted as coffees, 13 tea drinks was correctly predicted as a tea, and 25 drinks were incorrectly rejected.")
+    if st.checkbox("View Classification Report for Naive Bayes Model") == True:
+        nb_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
+        nb_classification_report_df = pd.DataFrame(nb_classification_report).transpose()
+        nb_classification_report_df = nb_classification_report_df.round(2)
+        nb_classification_report_df = nb_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
+        st.write(nb_classification_report_df)
+    precision, recall, _ = metrics.precision_recall_curve(y_test, probs[:, 1])
+    pr_df = pd.DataFrame({'Precision': precision, 'Recall': recall})
+
+    alt_chart = alt.Chart(pr_df).mark_line(color='green').encode(
+    x='Recall:Q',
+    y='Precision:Q'
+        ).properties(
+    title='Precision-Recall Curve for Naive Bayes'
+    ).interactive()
+
+    st.altair_chart(alt_chart)
+    st.subheader("View the nutritional labels and predicted drinks below:")
+    starbucks_drinks['Predicted Drink'] = nb.predict(X)
+    starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
+    st.write(starbucks_drinks)
 # XGBoost
-if selected_choice == "XGBoost":
+if selected_choice == 'XGBoost':
     xgb = XGBClassifier()
     xgb.fit(X_train, y_train)
     y_pred = xgb.predict(X_test)
-    print('Accuracy of XGBoost classifier on test set: {:.2f}'.format(xgb.score(X_test, y_test)))
-    # confusion matrix
+# confusion matrix
     xgb_confusion_matrix = metrics.confusion_matrix(y_test, y_pred)
-    xgb_confusion_matrix
-    # plot confusion matrix
+# plot confusion matrix
     class_names = ['Coffee', 'Tea']
-    fig, ax = plt.subplots()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names)
-    plt.yticks(tick_marks, class_names)
-    sns.heatmap(pd.DataFrame(xgb_confusion_matrix), annot=True, cmap="YlGn", fmt='g')
-    ax.xaxis.set_label_position("top")
-    plt.tight_layout()
-    plt.title('Tea vs. Coffee: XGBoost Confusion Matrix', y=1.1)
-    plt.ylabel('Actual')
-    plt.xlabel('Predicted')
-    st.pyplot()
-    # classification report
-    print(metrics.classification_report(y_test, y_pred))
-    st.write("Figure 7: XGBoost Classification Report")
-    st.write("The XGBoost model has an accuracy of 0.99. 56 teas were predicted correctly, only 1 drink was incorrectly predicted as a tea, 16 drinks were incorrectly as coffees, and 0 drinks were incorrectly rejected. This is the best model for classifying tea vs. coffee.")
-    # put the classification report in a pretty table
-    xgb_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
-    xgb_classification_report_df = pd.DataFrame(xgb_classification_report).transpose()
-    xgb_classification_report_df = xgb_classification_report_df.round(2)
-    xgb_classification_report_df = xgb_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
-    st.write(xgb_classification_report_df)
+    fig = px.imshow(xgb_confusion_matrix,
+                    labels=dict(x="Predicted", y="Actual", Count="greens"),
+                    x=class_names, y=class_names)
+
+    probs = xgb.predict_proba(X_test)
+    # Add annotations for the number of observations in each square
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            Count = 'white' if xgb_confusion_matrix[i, j] > xgb_confusion_matrix.max() / 2 else 'black'
+            fig.add_annotation(
+                go.layout.Annotation(
+                    text=str(xgb_confusion_matrix[i, j]),
+                    x=class_names[j],
+                    y=class_names[i],
+                    showarrow=False,
+                    font=dict(color=Count)
+                )
+            )
+    # Plotly Layout
+    fig.update_xaxes(side="top")
+    fig.update_layout(coloraxis=dict(colorscale='greens'))
+    fig.update_layout(title_text="Confusion Matrix for XGBoost", margin=dict(b=10, t=140))
+    st.plotly_chart(fig)
+
+# classification report
+    st.write("Figure 7: XGBoost Classification Confusion Matrix")
+    st.write("The XGBoost model has an accuracy of 0.99. 56 coffees were predicted correctly, 1 tea drink was incorrectly predicted as coffee, 16 tea drinks was correctly predicted as a tea, and 0 drinks were incorrectly rejected.")
+    if st.checkbox("View Classification Report for XGBoost Model") == True:
+        xgb_classification_report = metrics.classification_report(y_test, y_pred, output_dict=True)
+        xgb_classification_report_df = pd.DataFrame(xgb_classification_report).transpose()
+        xgb_classification_report_df = xgb_classification_report_df.round(2)
+        xgb_classification_report_df = xgb_classification_report_df.drop(['accuracy', 'macro avg', 'weighted avg'], axis=0)
+        st.write(xgb_classification_report_df)
+    precision, recall, _ = metrics.precision_recall_curve(y_test, probs[:, 1])
+    pr_df = pd.DataFrame({'Precision': precision, 'Recall': recall})
+
+    alt_chart = alt.Chart(pr_df).mark_line(color='green').encode(
+    x='Recall:Q',
+    y='Precision:Q'
+        ).properties(
+    title='Precision-Recall Curve for XGBoost'
+    ).interactive()
+
+    st.altair_chart(alt_chart)   
     st.subheader("View the nutritional labels and predicted drinks below:")
     starbucks_drinks['Predicted Drink'] = xgb.predict(X)
     starbucks_drinks['Predicted Drink'] = starbucks_drinks['Predicted Drink'].apply(lambda x: 'Tea' if x == 1 else 'Coffee')
     st.write(starbucks_drinks)
-
-    
 
